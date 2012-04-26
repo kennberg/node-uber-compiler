@@ -33,7 +33,8 @@ UberCompiler = function(options) {
   this.cssPaths = options.cssPaths || [];
   this.outputDir = options.outputDir || '/tmp/';
   this.compileMode = options.compileMode || 'WHITESPACE_ONLY';
-  this.prettyPrint = options.prettyPrint || true;
+  if (typeof options.prettyPrint != 'undefined')
+    this.prettyPrint = options.prettyPrint;
   this.warningLevel = options.warningLevel || 'QUIET';
   this.files = [];
 };
