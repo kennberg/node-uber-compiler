@@ -6,17 +6,20 @@ These are my favourite tools for developing lean webapps.
 
 Features:
 
-  * Google Closure Compiler, Closure Templates, LESS
-  * Watches files for changes and then re-compiles as soon as changes are detected
-  * Caches results, so compilation only happens on changes
-
-For the latest Google Closure Compiler and Template files visit:
-
-  * http://closure-compiler.googlecode.com/files/compiler-latest.zip
-  * http://closure-templates.googlecode.com/files/closure-templates-for-javascript-latest.zip
+  * Google Closure Compiler, Closure Templates, LESS.
+  * No need to restart the server. It watches files for changes and then re-compiles as soon as changes are detected.
+  * Caches results, so compilation only happens on changes.
 
 How to use
 ======================
+
+Installation inside your server directory:
+
+    git clone https://github.com/kennberg/node-uber-compiler uber-compiler
+    cd uber-compiler
+    npm install
+
+In your server.js do this before the service starts:
 
     var rootPath = process.cwd();
     var uberOptions = {
@@ -33,10 +36,20 @@ How to use
       cssPaths: [ rootPath + '/static/css' ],
       outputDir: rootPath + '/static/cached/',
     };
-    var uberCompiler = require('./uber_compiler/')(uberOptions);
+    var uberCompiler = require('./uber-compiler')(uberOptions);
     uberCompiler.run();
 
-Note that the compiler respects the order of the paths and can handle files and directories.
+Note that the compiler respects the order of the paths and can handle both files and directories.
+
+The compiler outputs 'cached.js' and 'cached.css' into outputDir specified in the options. You can include these in the HTML head tag.
+
+More info
+======================
+
+For the latest Google Closure Compiler and Template files visit:
+
+  * http://closure-compiler.googlecode.com/files/compiler-latest.zip
+  * http://closure-templates.googlecode.com/files/closure-templates-for-javascript-latest.zip
 
 See http://code.google.com/closure/compiler/docs/api-ref.html for more
 details on the compiler options.
