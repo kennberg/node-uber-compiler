@@ -1,5 +1,5 @@
 /**
- * Uber Compiler for Node.js
+ * Uber Compiler v0.3.1 for Node.js
  *
  * Copyright 2012 Alex Kennberg (https://github.com/kennberg/node-uber-compiler)
  *
@@ -18,9 +18,10 @@
 
 var childProcess = require('child_process');
 var fs = require('fs');
+var less = require('less');
+var path = require('path');
 var util = require('util');
 var _ = require('underscore');
-var less = require('less');
 
 
 module.exports = function(options) {
@@ -36,7 +37,10 @@ UberCompiler = function(options) {
   if (typeof options.prettyPrint != 'undefined')
     this.prettyPrint = options.prettyPrint;
   this.warningLevel = options.warningLevel || 'QUIET';
+
   this.files = [];
+  this.cssHash = null;
+  this.jsHash = null;
 };
 
 
@@ -57,7 +61,7 @@ UberCompiler.prototype._compileJsFinal = function(soyJsPath) {
   var jsFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
     jsFiles = jsFiles.concat(this._findFiles(this.jsPaths[i], fileExtensionRegex));
-  var jsCmd = 'java -jar ' + __dirname + '/third-party/compiler.jar';
+  var jsCmd = 'java -jar ' + path.join(__dirname, 'third-party/compiler.jar');
 
   jsCmd += ' --compilation_level ' + this.compileMode;
   jsCmd += ' --warning_level ' + this.warningLevel;
@@ -68,10 +72,10 @@ UberCompiler.prototype._compileJsFinal = function(soyJsPath) {
     jsCmd += ' --js ' + jsFiles[i];
   }
   if (soyJsPath) {
-    jsCmd += ' --js ' + __dirname + '/third-party/soyutils.js';
+    jsCmd += ' --js ' + path.join(__dirname, 'third-party/soyutils.js');
     jsCmd += ' --js ' + soyJsPath;
   }
-  jsCmd += ' > ' + this.outputDir + '/cached.js';
+  jsCmd += ' > ' + path.join(this.outputDir, 'cached.js');
 
   childProcess.exec(jsCmd, _.bind(function(error, stdout, stderr) {
     if (stderr && stderr.length) {
@@ -86,14 +90,14 @@ UberCompiler.prototype._compileJsFinal = function(soyJsPath) {
 UberCompiler.prototype._compileJs = function() {
   util.log('Compiling JS files');
 
-  var soyJsPath = this.outputDir + '/soy.js';
+  var soyJsPath = path.join(this.outputDir, 'soy.js');
   var fileExtensionRegex = this._getFileExtensionRegex('soy');
   var soyFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
     soyFiles = soyFiles.concat(this._findFiles(this.jsPaths[i], fileExtensionRegex));
 
   if (soyFiles && soyFiles.length) {
-    var soyCmd = 'java -jar ' + __dirname + '/third-party/SoyToJsSrcCompiler.jar';
+    var soyCmd = 'java -jar ' + path.join(__dirname, 'third-party/SoyToJsSrcCompiler.jar');
     soyCmd += ' --outputPathFormat ' + soyJsPath;
     for (var i = 0, l = soyFiles.length; i < l; i++)
       soyCmd += ' ' + soyFiles[i];
@@ -134,15 +138,15 @@ UberCompiler.prototype._compileCss = function() {
       util.error(err);
       return;
     }
-    fs.writeFileSync(this.outputDir + '/cached.css', tree.toCSS({ compress: true }));
+    fs.writeFileSync(path.join(this.outputDir, 'cached.css'), tree.toCSS({ compress: true }));
     util.log('Successfully compressed CSS files');
   }, this));
 };
 
 
 UberCompiler.prototype._watch = function() {
-  var watchHelper = _.bind(function(path) {
-    var cmd = 'find ' + path + ' | grep -E "\.(js|soy|css|less)$"';
+  var watchHelper = _.bind(function(searchPath) {
+    var cmd = 'find ' + searchPath + ' | grep -E "\.(js|soy|css|less)$"';
     childProcess.exec(cmd, _.bind(function(error, stdout, stderr) {
       var files = stdout.trim().split("\n");
       files.forEach(_.bind(function(file) {
@@ -171,16 +175,16 @@ UberCompiler.prototype._unwatch = function() {
 };
 
 
-UberCompiler.prototype._onFileChange = function(path) {
-  util.log('Detected file change: ' + path);
+UberCompiler.prototype._onFileChange = function(file) {
+  util.log('Detected file change: ' + file);
 
   var fileExtensionPattern = this._getFileExtensionRegex('js|soy');
-  if (path.match(fileExtensionPattern)) {
+  if (file.match(fileExtensionPattern)) {
     this._compileJs();
   }
   else {
     fileExtensionPattern = this._getFileExtensionRegex('css|less');
-    if (path.match(fileExtensionPattern)) {
+    if (file.match(fileExtensionPattern)) {
       this._compileCss();
     }
   }
@@ -192,34 +196,34 @@ UberCompiler.prototype._getFileExtensionRegex = function(fileExtensions) {
 };
 
 
-UberCompiler.prototype._findFiles = function(path, fileExtensionPattern) {
+UberCompiler.prototype._findFiles = function(searchPath, fileExtensionPattern) {
   var files = [];
   var stats;
   try {
-    stats = fs.statSync(path);
+    stats = fs.statSync(searchPath);
   }
   catch (exception) {
   }
 
   if (stats) {
     if (stats.isDirectory()) {
-      var fileNames = fs.readdirSync(path);
+      var fileNames = fs.readdirSync(searchPath);
       if (fileNames && fileNames.length) {
         fileNames.sort();
         for (var i = 0, l = fileNames.length; i < l; i++) {
           // Skip backup file names that start with ._
           if (fileNames[i].length > 2 && fileNames[i].substr(0, 2) == '._')
             continue;
-          files = files.concat(this._findFiles(path + '/' + fileNames[i], fileExtensionPattern));
+          files = files.concat(this._findFiles(path.join(searchPath, fileNames[i]), fileExtensionPattern));
         }
       }
     }
-    else if (path.match(fileExtensionPattern)) {
-      files.push(path);
+    else if (searchPath.match(fileExtensionPattern)) {
+      files.push(searchPath);
     }
   } // stats
   else {
-    util.error('Error retrieving stats for path: ' + path);
+    util.error('Error retrieving stats for path: ' + searchPath);
   }
   return files;
 };
