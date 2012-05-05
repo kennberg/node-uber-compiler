@@ -1,5 +1,5 @@
 /**
- * Uber Compiler v0.3.1 for Node.js
+ * Uber Compiler v0.3.2 for Node.js
  *
  * Copyright 2012 Alex Kennberg (https://github.com/kennberg/node-uber-compiler)
  *
