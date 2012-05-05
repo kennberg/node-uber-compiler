@@ -29,22 +29,47 @@ module.exports = function(options) {
 };
 
 
+/**
+ * The uber compiler compiles your client-side JS and CSS using Google Closure
+ * compiler, soy templates and LESS.
+ *
+ * Options:
+ * jsPaths - array of absolute paths to js/soy files or directories with js/soy files.
+ * cssPaths - array of absolute paths to css/less files or directories with css/less files.
+ * outputDir - absolute path to where the compiled files will be written.
+ * debug - true reduces compilation time and only compresses whitespace.
+ * useHash - generates dynamic output filenames based on the current options - use
+ *     getJsFilename() and getCssFilename() methods in your templates.
+ *
+ * Advanced options:
+ * warningLevel - string used for Closure Compiler to control what warnings to output.
+ * compileMode - string specifying the compile mode for Google Closure.
+ * prettyPrint - boolean to toggle pretty formatting of JS output.
+ */
 UberCompiler = function(options) {
   this.jsPaths = options.jsPaths || [];
   this.cssPaths = options.cssPaths || [];
   this.outputDir = options.outputDir || '/tmp/';
-  this.compileMode = options.compileMode || 'WHITESPACE_ONLY';
+  this.useHash = !!options.useHash;
+
+  // Defaults based on debug.
+  this.compileMode = (options.debug ? 'WHITESPACE_ONLY' : 'SIMPLE_OPTIMIZATIONS');
+  this.prettyPrint = !!options.debug;
+
+  // User can also override the advanced options.
+  if (typeof options.compileMode != 'undefined')
+    this.compileMode = options.compileMode;
   if (typeof options.prettyPrint != 'undefined')
     this.prettyPrint = options.prettyPrint;
   this.warningLevel = options.warningLevel || 'QUIET';
 
   this.files = [];
-  this.cssHash = null;
-  this.jsHash = null;
+  this.hash = (this.useHash ? this._getHash() : '');
 };
 
 
 UberCompiler.prototype.run = function() {
+  // TODO: get current timestamp and base compile off of that.
   this._watch();
   this._compileJs();
   this._compileCss();
@@ -53,6 +78,60 @@ UberCompiler.prototype.run = function() {
 
 UberCompiler.prototype.terminate = function() {
   this._unwatch();
+};
+
+
+/**
+ * Returns the name of the output javascript file.
+ */
+UberCompiler.prototype.getJsFilename = function() {
+  return 'cached' + this.hash + '.js';
+};
+
+
+/**
+ * Returns the name of the output css file.
+ */
+UberCompiler.prototype.getCssFilename = function() {
+  return 'cached' + this.hash + '.css';
+};
+
+
+/**
+ * Generate simple unsecure hash based on all the options in this object.
+ */
+UberCompiler.prototype._getHash = function() {
+  var hash = 275329; // Salt
+  for (var property in this) {
+    switch (typeof this[property]) {
+      case 'object': {
+        var arr = this[property];
+        for (var i in arr) {
+          if (typeof arr[i] === 'string')
+            hash = this._addToHash(hash, arr[i]);
+        }
+        break;
+      }
+      case 'boolean':
+        hash = this._addToHash(hash, this[property] ? 'Y' : 'n');
+        break;
+      case 'string':
+        hash = this._addToHash(hash, this[property]);
+        break;
+      default:
+    }
+  }
+  return hash;
+};
+
+
+UberCompiler.prototype._addToHash = function(hash, text) {
+  for (var i = 0, l = text.length; i < l; i++) {
+    var code = text.charCodeAt(i);
+    hash = ((hash << 5) - hash) + code;
+    hash = hash & hash;
+  }
+  return hash;
 };
 
 
@@ -75,7 +154,7 @@ UberCompiler.prototype._compileJsFinal = function(soyJsPath) {
     jsCmd += ' --js ' + path.join(__dirname, 'third-party/soyutils.js');
     jsCmd += ' --js ' + soyJsPath;
   }
-  jsCmd += ' > ' + path.join(this.outputDir, 'cached.js');
+  jsCmd += ' > ' + path.join(this.outputDir, this.getJsFilename());
 
   childProcess.exec(jsCmd, _.bind(function(error, stdout, stderr) {
     if (stderr && stderr.length) {
@@ -138,7 +217,7 @@ UberCompiler.prototype._compileCss = function() {
       util.error(err);
       return;
     }
-    fs.writeFileSync(path.join(this.outputDir, 'cached.css'), tree.toCSS({ compress: true }));
+    fs.writeFileSync(path.join(this.outputDir, this.getCssFilename()), tree.toCSS({ compress: true }));
     util.log('Successfully compressed CSS files');
   }, this));
 };
@@ -227,4 +306,5 @@ UberCompiler.prototype._findFiles = function(searchPath, fileExtensionPattern) {
   }
   return files;
 };
+
 

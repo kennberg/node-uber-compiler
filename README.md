@@ -24,24 +24,49 @@ In your server.js do this before the service starts:
     var rootPath = process.cwd();
     var uberOptions = {
       jsPaths: [
-        rootPath + '/static/js/lib/jquery-1.7.2.js',
-        rootPath + '/static/js/lib/underscore.js',
-        rootPath + '/static/js/lib/backbone.js',
-        rootPath + '/static/js/init.js',
-        rootPath + '/static/js/model/',
-        rootPath + '/static/js/view/',
-        rootPath + '/static/js/router/',
-        rootPath + '/static/js/main.js',
+        path.join(rootPath, 'static/js/lib/jquery-1.7.2.js'),
+        path.join(rootPath, 'static/js/lib/underscore.js'),
+        path.join(rootPath, 'static/js/lib/backbone.js'),
+        path.join(rootPath, 'static/js/init.js'),
+        path.join(rootPath, 'static/js/model/'),
+        path.join(rootPath, 'static/js/view/'),
+        path.join(rootPath, 'static/js/router/'),
+        path.join(rootPath, 'static/js/main.js')
       ],
-      cssPaths: [ rootPath + '/static/css' ],
-      outputDir: rootPath + '/static/cached/',
+      cssPaths: [ path.join(rootPath, 'static/css') ],
+      outputDir: path.join(rootPath, 'static/cached'),
+      debug: false
     };
     var uberCompiler = require('./uber-compiler')(uberOptions);
     uberCompiler.run();
 
 Note that the compiler respects the order of the paths and can handle both files and directories.
 
-The compiler outputs 'cached.js' and 'cached.css' into outputDir specified in the options. You can include these in the HTML head tag.
+The compiler, by default, outputs 'cached.js' and 'cached.css' into outputDir specified in the options. You can include these in the HTML head tag:
+
+    <html>
+    <head>
+    <script type="text/javascript" src="cached/cached.js"></script>
+    <link rel="stylesheet" type="text/css" href="cached/cached.css" />
+    </head>
+    <body>
+      <p>Hello world!</p>
+    </body>
+    </html>
+
+Options:
+
+  * jsPaths - array of absolute paths to js/soy files or directories with js/soy files.
+  * cssPaths - array of absolute paths to css/less files or directories with css/less files.
+  * outputDir - absolute path to where the compiled files will be written.
+  * debug - true reduces compilation time and only compresses whitespace.
+  * useHash - generates dynamic output filenames based on the current options - use getJsFilename() and getCssFilename() methods in your templates.
+
+Advanced options:
+
+  * warningLevel - string used for Closure Compiler to control what warnings to output.
+  * compileMode - string specifying the compile mode for Google Closure.
+  * prettyPrint - boolean to toggle pretty formatting of JS output.
 
 More info
 ======================
@@ -53,6 +78,8 @@ For the latest Google Closure Compiler and Template files visit:
 
 See http://code.google.com/closure/compiler/docs/api-ref.html for more
 details on the compiler options.
+
+See http://lesscss.org/ for more details about LESS.
 
 License
 ======================
