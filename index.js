@@ -37,6 +37,7 @@ module.exports = function(options) {
  * jsPaths - array of absolute paths to js/soy files or directories with js/soy files.
  * cssPaths - array of absolute paths to css/less files or directories with css/less files.
  * outputDir - absolute path to where the compiled files will be written.
+ * dontWatchFiles - will not watch for file changes. Might want to use this in production.
  * debug - true reduces compilation time and only compresses whitespace.
  * useHash - generates dynamic output filenames based on the current options - use
  *     getJsFilename() and getCssFilename() methods in your templates.
@@ -51,6 +52,7 @@ UberCompiler = function(options) {
   this.cssPaths = options.cssPaths || [];
   this.outputDir = options.outputDir || '/tmp/';
   this.useHash = !!options.useHash;
+  this.dontWatchFiles = !!options.dontWatchFiles;
 
   // Defaults based on debug.
   this.compileMode = (options.debug ? 'WHITESPACE_ONLY' : 'SIMPLE_OPTIMIZATIONS');
@@ -70,14 +72,16 @@ UberCompiler = function(options) {
 
 UberCompiler.prototype.run = function() {
   // TODO: get current timestamp and base compile off of that.
-  this._watch();
+  if (!this.dontWatchFiles)
+    this._watch();
   this._compileJs();
   this._compileCss();
 };
 
 
 UberCompiler.prototype.terminate = function() {
-  this._unwatch();
+  if (!this.dontWatchFiles)
+    this._unwatch();
 };
 
 
