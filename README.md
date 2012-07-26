@@ -9,6 +9,7 @@ Features:
   * Google Closure Compiler, Closure Templates, LESS.
   * No need to restart the server. It watches files for changes and then re-compiles as soon as changes are detected.
   * Caches results, so compilation only happens on changes.
+  * Compiles on startup unless source files have not changed.
 
 How to use
 ======================
@@ -59,6 +60,7 @@ Options:
   * jsPaths - array of absolute paths to js/soy files or directories with js/soy files.
   * cssPaths - array of absolute paths to css/less files or directories with css/less files.
   * outputDir - absolute path to where the compiled files will be written.
+  * dontWatchFiles - turn off re-compile when files change. Might want to use this in production.
   * debug - true reduces compilation time and only compresses whitespace.
   * useHash - generates dynamic output filenames based on the current options - use getJsFilename() and getCssFilename() methods in your templates.
 
