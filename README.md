@@ -14,31 +14,36 @@ Features:
 How to use
 ======================
 
-Installation inside your server directory:
+Install the latest module using NPM:
+
+    npm install uber-compiler
+
+
+Alternatively, for manual installation:
 
     git clone https://github.com/kennberg/node-uber-compiler uber-compiler
     cd uber-compiler
     npm install
 
-In your server.js do this before the service starts:
+In your server.js do this before the service starts (replace paths with your own):
 
     var rootPath = process.cwd();
     var uberOptions = {
       jsPaths: [
-        path.join(rootPath, 'static/js/lib/jquery-1.7.2.js'),
-        path.join(rootPath, 'static/js/lib/underscore.js'),
-        path.join(rootPath, 'static/js/lib/backbone.js'),
-        path.join(rootPath, 'static/js/init.js'),
-        path.join(rootPath, 'static/js/model/'),
-        path.join(rootPath, 'static/js/view/'),
-        path.join(rootPath, 'static/js/router/'),
-        path.join(rootPath, 'static/js/main.js')
+        path.join(rootPath, 'public/js/lib/jquery-1.7.2.js'),
+        path.join(rootPath, 'public/js/lib/underscore.js'),
+        path.join(rootPath, 'public/js/lib/backbone.js'),
+        path.join(rootPath, 'public/js/init.js'),
+        path.join(rootPath, 'public/js/model/'),
+        path.join(rootPath, 'public/js/view/'),
+        path.join(rootPath, 'public/js/router/'),
+        path.join(rootPath, 'public/js/main.js')
       ],
-      cssPaths: [ path.join(rootPath, 'static/css') ],
-      outputDir: path.join(rootPath, 'static/cached'),
+      cssPaths: [ path.join(rootPath, 'public/css') ],
+      outputDir: path.join(rootPath, 'public/cached'),
       debug: false
     };
-    var uberCompiler = require('./uber-compiler')(uberOptions);
+    var uberCompiler = require('uber-compiler')(uberOptions);
     uberCompiler.run();
 
 Note that the compiler respects the order of the paths and can handle both files and directories.
