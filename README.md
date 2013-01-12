@@ -69,6 +69,7 @@ Advanced options:
   * warningLevel - string used for Closure Compiler to control what warnings to output.
   * compileMode - string specifying the compile mode for Google Closure.
   * prettyPrint - boolean to toggle pretty formatting of JS output.
+  * endCallback - called when compilation of all resources completes.
 
 More info
 ======================

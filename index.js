@@ -46,6 +46,7 @@ module.exports = function(options) {
  * warningLevel - string used for Closure Compiler to control what warnings to output.
  * compileMode - string specifying the compile mode for Google Closure.
  * prettyPrint - boolean to toggle pretty formatting of JS output.
+ * endCallback - called when compilation of all resources completes.
  */
 UberCompiler = function(options) {
   this.jsPaths = options.jsPaths || [];
@@ -67,6 +68,8 @@ UberCompiler = function(options) {
 
   this.files = [];
   this.hash = (this.useHash ? this.getHash_() : '');
+
+  this.endCallback = options.endCallback || null;
 };
 
 
@@ -78,6 +81,7 @@ UberCompiler.prototype.run = function() {
     this.compileJs_();
   if (this.shouldCompileCss_())
     this.compileCss_();
+  this.checkEnd_();
 };
 
 
@@ -168,12 +172,15 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
       return;
     }
     util.log('Successfully compiled JS files');
+    this.compilingJs_ = false;
+    this.checkEnd_();
   }, this));
 };
 
 
 UberCompiler.prototype.compileJs_ = function() {
   util.log('Compiling JS files');
+  this.compilingJs_ = true;
 
   var soyJsPath = path.join(this.outputDir, 'soy.js');
   var fileExtensionRegex = this.getFileExtensionRegex_('soy');
@@ -202,6 +209,8 @@ UberCompiler.prototype.compileJs_ = function() {
 
 
 UberCompiler.prototype.compileCss_ = function() {
+  this.compilingCss_ = true;
+
   var fileExtensionRegex = this.getFileExtensionRegex_('css|less');
   var files = [];
   for (var i = 0, l = this.cssPaths.length; i < l; i++)
@@ -230,7 +239,10 @@ UberCompiler.prototype.compileCss_ = function() {
       return;
     }
     fs.writeFileSync(path.join(this.outputDir, this.getCssFilename()), tree.toCSS({ compress: true }));
+
     util.log('Successfully compressed CSS files');
+    this.compilingCss_ = false;
+    this.checkEnd_();
   }, this));
 };
 
@@ -363,5 +375,13 @@ UberCompiler.prototype.shouldCompile_ = function(inputPaths, outputFilename, fil
   } // for each input path
 
   return result;
+};
+
+
+UberCompiler.prototype.checkEnd_ = function() {
+  if (!this.compilingJs_ && !this.compilingCss_) {
+    if (typeof this.endCallback === 'function')
+      this.endCallback();
+  }
 };
 

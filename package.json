@@ -17,6 +17,7 @@
     "compile",
     "compiler",
     "compress",
+    "minify",
     "google",
     "closure",
     "js",
