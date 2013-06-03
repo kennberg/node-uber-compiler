@@ -27,6 +27,8 @@ Alternatively, for manual installation:
 
 In your server.js do this before the service starts (replace paths with your own):
 
+    var path = require('path');
+
     var rootPath = process.cwd();
     var uberOptions = {
       jsPaths: [
