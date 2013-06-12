@@ -173,7 +173,6 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
     jsCmd += ' --js ' + soyJsPath;
   }
   jsCmd += ' > ' + path.join(this.outputDir, this.getJsFilename());
-  util.log(jsCmd);
   childProcess.exec(jsCmd, _.bind(function(error, stdout, stderr) {
     if (stderr && stderr.length) {
       util.error(stderr);
