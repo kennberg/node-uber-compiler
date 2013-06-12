@@ -47,9 +47,11 @@ module.exports = function(options) {
  * compileMode - string specifying the compile mode for Google Closure.
  * prettyPrint - boolean to toggle pretty formatting of JS output.
  * endCallback - called when compilation of all resources completes.
+ * externPaths - array of absolute paths to js files or directories with js files to use for extern declarations.
  */
 UberCompiler = function(options) {
   this.jsPaths = options.jsPaths || [];
+  this.externPaths = options.externPaths || [];
   this.cssPaths = options.cssPaths || [];
   this.outputDir = options.outputDir || '/tmp/';
   this.useHash = !!options.useHash;
@@ -150,6 +152,9 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
   var jsFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
     jsFiles = jsFiles.concat(this.findFiles_(this.jsPaths[i], fileExtensionRegex));
+  var externFiles = [];
+  for (var i = 0, l = this.externPaths.length; i < l; i++)
+    externFiles = externFiles.concat(this.findFiles_(this.externPaths[i], fileExtensionRegex));
   var jsCmd = 'java -jar ' + path.join(__dirname, 'third-party/compiler.jar');
 
   jsCmd += ' --compilation_level ' + this.compileMode;
@@ -157,6 +162,9 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
   if (this.prettyPrint) 
     jsCmd += ' --formatting pretty_print';
 
+  for (var i = 0; i < externFiles.length; i++) {
+    jsCmd += ' --externs ' + externFiles[i];
+  }
   for (var i = 0, l = jsFiles.length; i < l; i++) {
     jsCmd += ' --js ' + jsFiles[i];
   }
@@ -165,7 +173,7 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
     jsCmd += ' --js ' + soyJsPath;
   }
   jsCmd += ' > ' + path.join(this.outputDir, this.getJsFilename());
-
+  util.log(jsCmd);
   childProcess.exec(jsCmd, _.bind(function(error, stdout, stderr) {
     if (stderr && stderr.length) {
       util.error(stderr);
@@ -263,6 +271,8 @@ UberCompiler.prototype.watch_ = function() {
     }, this)); // childProcess.exec
   }, this); // watch helper
 
+  for (var i = 0, l = this.externPaths.length; i < l; i++)
+    watchHelper(this.externPaths[i]);
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
     watchHelper(this.jsPaths[i]);
   for (var i = 0, l = this.cssPaths.length; i < l; i++)
