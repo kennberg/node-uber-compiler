@@ -77,6 +77,7 @@ Advanced options:
   * compileMode - string specifying the compile mode for Google Closure.
   * prettyPrint - boolean to toggle pretty formatting of JS output.
   * endCallback - called when compilation of all resources completes.
+  * externPaths - array of absolute paths to js files or directories with js files to use for extern declarations.
 
 More info
 ======================

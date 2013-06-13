@@ -48,6 +48,8 @@ module.exports = function(options) {
  * prettyPrint - boolean to toggle pretty formatting of JS output.
  * endCallback - called when compilation of all resources completes.
  * externPaths - array of absolute paths to js files or directories with js files to use for extern declarations.
+ *
+ * Committer: When editing options, please also update the README file.
  */
 UberCompiler = function(options) {
   this.jsPaths = options.jsPaths || [];
@@ -162,7 +164,7 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
   if (this.prettyPrint) 
     jsCmd += ' --formatting pretty_print';
 
-  for (var i = 0; i < externFiles.length; i++) {
+  for (var i = 0, l = externFiles.length; i < l; i++) {
     jsCmd += ' --externs ' + externFiles[i];
   }
   for (var i = 0, l = jsFiles.length; i < l; i++) {
