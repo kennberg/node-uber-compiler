@@ -199,6 +199,9 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
   var jsFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
     jsFiles = jsFiles.concat(module.exports.findFiles(this.jsPaths[i], fileExtensionRegex));
+  var externFiles = [];
+  for (var i = 0, l = this.externPaths.length; i < l; i++)
+    externFiles = externFiles.concat(module.exports.findFiles(this.externPaths[i], fileExtensionRegex));
   var jsCmd = 'java -jar ' + path.join(__dirname, 'third-party/compiler.jar');
 
   jsCmd += ' --compilation_level ' + this.compileMode;
