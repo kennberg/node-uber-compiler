@@ -29,6 +29,46 @@ module.exports = function(options) {
 };
 
 
+module.exports.getFileExtensionRegex = function(fileExtensions) {
+  return new RegExp("^.*\.(" + fileExtensions + ")$");
+};
+
+
+module.exports.findFiles = function(searchPath, fileExtensionPattern) {
+  var stats;
+  try {
+    stats = fs.statSync(searchPath);
+  }
+  catch (exception) {
+    util.error(exception);
+  }
+  if (!stats) {
+    util.error('Error retrieving stats for path: ' + searchPath);
+    return [];
+  }
+
+  var files = [];
+  if (stats.isDirectory()) {
+    var fileNames = fs.readdirSync(searchPath);
+    if (fileNames && fileNames.length) {
+      fileNames.sort();
+      for (var i = 0, l = fileNames.length; i < l; i++) {
+        // Skip backup file names that start with ._
+        if (fileNames[i].length > 2 && fileNames[i].substr(0, 2) == '._') {
+          continue;
+        }
+        files = files.concat(module.exports.findFiles(path.join(
+            searchPath, fileNames[i]), fileExtensionPattern));
+      }
+    }
+  }
+  else if (searchPath.match(fileExtensionPattern)) {
+    files.push(searchPath);
+  }
+  return files;
+};
+
+
 /**
  * The uber compiler compiles your client-side JS and CSS using Google Closure
  * compiler, soy templates and LESS.
@@ -74,6 +114,11 @@ UberCompiler = function(options) {
   this.hash = (this.useHash ? this.getHash_() : '');
 
   this.endCallback = options.endCallback || null;
+
+  this.fileChangedJs = false;
+  this.fileChangedCss = false;
+  this.fileChangedTimer = null;
+  this.fileChangeMap = {};
 };
 
 
@@ -150,13 +195,10 @@ UberCompiler.prototype.addToHash_ = function(hash, text) {
 
 
 UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
-  var fileExtensionRegex = this.getFileExtensionRegex_('js');
+  var fileExtensionRegex = module.exports.getFileExtensionRegex('js');
   var jsFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
-    jsFiles = jsFiles.concat(this.findFiles_(this.jsPaths[i], fileExtensionRegex));
-  var externFiles = [];
-  for (var i = 0, l = this.externPaths.length; i < l; i++)
-    externFiles = externFiles.concat(this.findFiles_(this.externPaths[i], fileExtensionRegex));
+    jsFiles = jsFiles.concat(module.exports.findFiles(this.jsPaths[i], fileExtensionRegex));
   var jsCmd = 'java -jar ' + path.join(__dirname, 'third-party/compiler.jar');
 
   jsCmd += ' --compilation_level ' + this.compileMode;
@@ -175,6 +217,7 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
     jsCmd += ' --js ' + soyJsPath;
   }
   jsCmd += ' > ' + path.join(this.outputDir, this.getJsFilename());
+
   childProcess.exec(jsCmd, _.bind(function(error, stdout, stderr) {
     if (stderr && stderr.length) {
       util.error(stderr);
@@ -183,6 +226,11 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
     util.log('Successfully compiled JS files');
     this.compilingJs_ = false;
     this.checkEnd_();
+
+    if (soyJsPath) {
+      childProcess.exec('rm ' + soyJsPath);
+      soyJsPath = null;
+    }
   }, this));
 };
 
@@ -192,10 +240,10 @@ UberCompiler.prototype.compileJs_ = function() {
   this.compilingJs_ = true;
 
   var soyJsPath = path.join(this.outputDir, 'soy.js');
-  var fileExtensionRegex = this.getFileExtensionRegex_('soy');
+  var fileExtensionRegex = module.exports.getFileExtensionRegex('soy');
   var soyFiles = [];
   for (var i = 0, l = this.jsPaths.length; i < l; i++)
-    soyFiles = soyFiles.concat(this.findFiles_(this.jsPaths[i], fileExtensionRegex));
+    soyFiles = soyFiles.concat(module.exports.findFiles(this.jsPaths[i], fileExtensionRegex));
 
   if (soyFiles && soyFiles.length) {
     var soyCmd = 'java -jar ' + path.join(__dirname, 'third-party/SoyToJsSrcCompiler.jar');
@@ -220,10 +268,10 @@ UberCompiler.prototype.compileJs_ = function() {
 UberCompiler.prototype.compileCss_ = function() {
   this.compilingCss_ = true;
 
-  var fileExtensionRegex = this.getFileExtensionRegex_('css|less');
+  var fileExtensionRegex = module.exports.getFileExtensionRegex('css|less');
   var files = [];
   for (var i = 0, l = this.cssPaths.length; i < l; i++)
-    files = files.concat(this.findFiles_(this.cssPaths[i], fileExtensionRegex));
+    files = files.concat(module.exports.findFiles(this.cssPaths[i], fileExtensionRegex));
 
   util.log('Compressing ' + files.length + ' CSS files');
 
@@ -263,11 +311,23 @@ UberCompiler.prototype.watch_ = function() {
       var files = stdout.trim().split("\n");
       files.forEach(_.bind(function(file) {
         this.files.push(file);
+
         fs.watchFile(file, { interval: 500 }, _.bind(function(curr, prev) {
-          if (curr.mtime.valueOf() != prev.mtime.valueOf() || curr.ctime.valueOf() != prev.ctime.valueOf()) {
-            this.onFileChange_(file);
+          var currMTime = +curr.mtime.valueOf();
+          var prevMTime = +prev.mtime.valueOf();
+
+          // Check to make sure that this file has not already been flagged for change.
+          if (currMTime <= prevMTime || (
+              typeof this.fileChangeMap[file] !== 'undefined' &&
+              this.fileChangeMap[file] >= currMTime)) {
+            return;
           }
+          this.fileChangeMap[file] = currMTime;
+
+          // Proceed to handle file change.
+          this.onFileChange_(file);
         }, this)); // watch file
+
       }, this)); // for each file
     }, this)); // childProcess.exec
   }, this); // watch helper
@@ -292,54 +352,31 @@ UberCompiler.prototype.unwatch_ = function() {
 UberCompiler.prototype.onFileChange_ = function(file) {
   util.log('Detected file change: ' + file);
 
-  var fileExtensionPattern = this.getFileExtensionRegex_('js|soy');
+  var fileExtensionPattern = module.exports.getFileExtensionRegex('js|soy');
   if (file.match(fileExtensionPattern)) {
-    this.compileJs_();
+    this.fileChangedJs = true;
   }
   else {
-    fileExtensionPattern = this.getFileExtensionRegex_('css|less');
+    fileExtensionPattern = module.exports.getFileExtensionRegex('css|less');
     if (file.match(fileExtensionPattern)) {
+      this.fileChangedCss = true;
+    }
+  }
+
+  // De-bouce in case a few files were saved at the same time.
+  clearTimeout(this.fileChangedTimer);
+  this.fileChangedTimer = setTimeout(_.bind(function() {
+    this.fileChangedTimer = null;
+
+    if (this.fileChangedJs) {
+      this.fileChangedJs = false;
+      this.compileJs_();
+    }
+    if (this.fileChangedCss) {
+      this.fileChangedCss = false;
       this.compileCss_();
     }
-  }
-};
-
-
-UberCompiler.prototype.getFileExtensionRegex_ = function(fileExtensions) {
-  return new RegExp("^.*\.(" + fileExtensions + ")$");
-};
-
-
-UberCompiler.prototype.findFiles_ = function(searchPath, fileExtensionPattern) {
-  var files = [];
-  var stats;
-  try {
-    stats = fs.statSync(searchPath);
-  }
-  catch (exception) {
-  }
-
-  if (stats) {
-    if (stats.isDirectory()) {
-      var fileNames = fs.readdirSync(searchPath);
-      if (fileNames && fileNames.length) {
-        fileNames.sort();
-        for (var i = 0, l = fileNames.length; i < l; i++) {
-          // Skip backup file names that start with ._
-          if (fileNames[i].length > 2 && fileNames[i].substr(0, 2) == '._')
-            continue;
-          files = files.concat(this.findFiles_(path.join(searchPath, fileNames[i]), fileExtensionPattern));
-        }
-      }
-    }
-    else if (searchPath.match(fileExtensionPattern)) {
-      files.push(searchPath);
-    }
-  } // stats
-  else {
-    util.error('Error retrieving stats for path: ' + searchPath);
-  }
-  return files;
+  }, this), 500);
 };
 
 
@@ -367,9 +404,9 @@ UberCompiler.prototype.shouldCompile_ = function(inputPaths, outputFilename, fil
   if (!outputTime)
     return true;
 
-  var fileExtensionRegex = this.getFileExtensionRegex_(fileExtensions);
+  var fileExtensionRegex = module.exports.getFileExtensionRegex(fileExtensions);
   for (var i = 0, l = inputPaths.length; i < l; i++) {
-    var files = this.findFiles_(inputPaths[i], fileExtensionRegex);
+    var files = module.exports.findFiles(inputPaths[i], fileExtensionRegex);
     for (var j = 0, m = files.length; j < m; j++) {
       try {
         var stats = fs.statSync(files[j]);

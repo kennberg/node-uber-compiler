@@ -1,7 +1,7 @@
 {
   "name": "uber-compiler",
   "description": "Compiler for client-side JS and CSS using Google Closure and LESS",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "homepage": "https://github.com/kennberg/node-uber-compiler",
   "repository": "git://github.com/kennberg/node-uber-compiler.git",
   "author": "Alex Kennberg",
