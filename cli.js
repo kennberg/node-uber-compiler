@@ -38,11 +38,13 @@ module.exports.cli = function(args) {
     console.error('Option --config is required.');
   }
 
-  var config = require(path.join(__dirname, options.config));
-  config.endCallback = function() {
-    console.log('Example compiled.');
-    process.exit();
-  };
+  var config = require(path.join(process.cwd(), options.config));
+  if (!config.endCallback) {
+    config.endCallback = function() {
+      console.log('Resources compiled.');
+      process.exit();
+    };
+  }
 
   var uberCompiler = require('./index.js')(config);
   uberCompiler.run();
