@@ -101,6 +101,7 @@ UberCompiler = function(options) {
   // Defaults based on debug.
   this.compileMode = (options.debug ? 'WHITESPACE_ONLY' : 'SIMPLE_OPTIMIZATIONS');
   this.prettyPrint = !!options.debug;
+  this.compressCss = !options.debug;
 
   // User can also override the advanced options.
   if (typeof options.compileMode != 'undefined')
@@ -295,7 +296,7 @@ UberCompiler.prototype.compileCss_ = function() {
   }
 
   var options = {
-    compress: true,
+    compress: this.compressCss,
     sourceMap: {},
   };
   less.render(data, options, _.bind(function(err, output) {
