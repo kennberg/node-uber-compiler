@@ -156,6 +156,14 @@ UberCompiler.prototype.getCssFilename = function() {
 
 
 /**
+ * Returns the name of the output css source map file.
+ */
+UberCompiler.prototype.getCssMapFilename = function() {
+  return 'cached' + this.hash + '.css.map';
+};
+
+
+/**
  * Generate simple unsecure hash based on all the options in this object.
  */
 UberCompiler.prototype.getHash_ = function() {
@@ -286,8 +294,11 @@ UberCompiler.prototype.compileCss_ = function() {
     }
   }
 
-  var parser = new(less.Parser)({});
-  parser.parse(data, _.bind(function(err, tree) {
+  var options = {
+    compress: true,
+    sourceMap: {},
+  };
+  less.render(data, options, _.bind(function(err, output) {
     if (err) {
       var message = 'CSS ' + err.type + ' Error: ' + err.message;
       if (err.extract && err.extract.length) {
@@ -298,7 +309,10 @@ UberCompiler.prototype.compileCss_ = function() {
       console.error(message);
       return;
     }
-    fs.writeFileSync(path.join(this.outputDir, this.getCssFilename()), tree.toCSS({ compress: true }));
+    fs.writeFileSync(path.join(this.outputDir, this.getCssFilename()), output.css);
+    if (output.map) {
+      fs.writeFileSync(path.join(this.outputDir, this.getCssMapFilename()), output.map);
+    }
 
     console.log('Successfully compressed CSS files');
     this.compilingCss_ = false;
