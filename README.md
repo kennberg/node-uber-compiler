@@ -16,7 +16,8 @@ How to use
 
 Install the latest module using NPM:
 
-    npm install uber-compiler
+    npm i -g google-closure-compiler
+    npm i uber-compiler
 
 
 Alternatively, for manual installation:
@@ -84,8 +85,8 @@ More info
 
 For the latest Google Closure Compiler and Template files visit:
 
-  * http://closure-compiler.googlecode.com/files/compiler-latest.zip
-  * http://closure-templates.googlecode.com/files/closure-templates-for-javascript-latest.zip
+  * npm i -g google-closure-compiler
+  * https://github.com/google/closure-templates/releases
 
 See http://code.google.com/closure/compiler/docs/api-ref.html for more
 details on the compiler options.
