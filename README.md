@@ -88,6 +88,8 @@ For the latest Google Closure Compiler and Template files visit:
   * npm i -g google-closure-compiler
   * https://github.com/google/closure-templates/releases
 
+Latest soy compiler can be found at https://repo1.maven.org/maven2/com/google/template/soy/ which also has the latest soyutils js file.
+
 See http://code.google.com/closure/compiler/docs/api-ref.html for more
 details on the compiler options.
 

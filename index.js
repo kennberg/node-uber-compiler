@@ -224,7 +224,8 @@ UberCompiler.prototype.compileJsFinal_ = function(soyJsPath) {
     jsCmd += ' --js ' + jsFiles[i];
   }
   if (soyJsPath) {
-    jsCmd += ' --js ' + path.join(__dirname, 'third-party/soyutils.js');
+    jsCmd += ' --js ' + path.join(__dirname, 'third-party/checks.js');
+    jsCmd += ' --js ' + path.join(__dirname, 'third-party/soy-2021-02-01-soyutils_usegoog.js');
     jsCmd += ' --js ' + soyJsPath;
   }
   jsCmd += ' > ' + path.join(this.outputDir, this.getJsFilename());
@@ -257,10 +258,12 @@ UberCompiler.prototype.compileJs_ = function() {
     soyFiles = soyFiles.concat(module.exports.findFiles(this.jsPaths[i], fileExtensionRegex));
 
   if (soyFiles && soyFiles.length) {
-    var soyCmd = 'java -jar ' + path.join(__dirname, 'third-party/SoyToJsSrcCompiler.jar');
+    var soyCmd = 'java -jar ' + path.join(__dirname, 'third-party/soy-2021-02-01-SoyToJsSrcCompiler.jar');
     soyCmd += ' --outputPathFormat ' + soyJsPath;
+    var srcs = [];
     for (var i = 0, l = soyFiles.length; i < l; i++)
-      soyCmd += ' ' + soyFiles[i];
+      srcs.push(soyFiles[i]);
+    soyCmd += ' --srcs ' + srcs.join(',');
 
     childProcess.exec(soyCmd, _.bind(function(error, stdout, stderr) {
       if (stderr && stderr.length) {
