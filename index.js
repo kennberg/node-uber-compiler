@@ -76,6 +76,7 @@ module.exports.findFiles = function(searchPath, fileExtensionPattern) {
  * jsPaths - array of absolute paths to js/soy files or directories with js/soy files.
  * cssPaths - array of absolute paths to css/less files or directories with css/less files.
  * outputDir - absolute path to where the compiled files will be written.
+ * moduleName - module name used for filename of the outputs.
  * dontWatchFiles - turn off re-compile when files change. Might want to use this in production.
  * debug - true reduces compilation time and only compresses whitespace.
  * useHash - generates dynamic output filenames based on the current options - use
@@ -95,6 +96,7 @@ UberCompiler = function(options) {
   this.externPaths = options.externPaths || [];
   this.cssPaths = options.cssPaths || [];
   this.outputDir = options.outputDir || '/tmp/';
+  this.moduleName = options.moduleName || 'cached';
   this.useHash = !!options.useHash;
   this.dontWatchFiles = !!options.dontWatchFiles;
 
@@ -144,7 +146,7 @@ UberCompiler.prototype.terminate = function() {
  * Returns the name of the output javascript file.
  */
 UberCompiler.prototype.getJsFilename = function() {
-  return 'cached' + this.hash + '.js';
+  return this.moduleName + this.hash + '.js';
 };
 
 
@@ -152,7 +154,7 @@ UberCompiler.prototype.getJsFilename = function() {
  * Returns the name of the output css file.
  */
 UberCompiler.prototype.getCssFilename = function() {
-  return 'cached' + this.hash + '.css';
+  return this.moduleName + this.hash + '.css';
 };
 
 
@@ -160,7 +162,7 @@ UberCompiler.prototype.getCssFilename = function() {
  * Returns the name of the output css source map file.
  */
 UberCompiler.prototype.getCssMapFilename = function() {
-  return 'cached' + this.hash + '.css.map';
+  return this.moduleName + this.hash + '.css.map';
 };
 
 
